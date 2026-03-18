@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
-import { DotsThree, Bell, ArrowsOutSimple, Moon } from '@phosphor-icons/react'
+import { DotsThree, Bell, ArrowsOutSimple, Moon, Circle } from '@phosphor-icons/react'
 import { useThemeStore } from '../theme'
 import { useSessionStore } from '../stores/sessionStore'
 import { usePopoverLayer } from './PopoverLayer'
@@ -38,6 +38,85 @@ function RowToggle({
         }}
       />
     </button>
+  )
+}
+
+// ─── Accent color row ───
+
+const DEFAULT_ACCENT = '#d97757'
+const PRESETS = [
+  '#d97757',
+  '#e05c6a',
+  '#d4a017',
+  '#6ab04c',
+  '#3b9edd',
+  '#9b59b6',
+  '#e67e22',
+]
+
+function AccentRow({ colors }: { colors: ReturnType<typeof useColors> }) {
+  const accentColor = useThemeStore((s) => s.accentColor)
+  const setAccentColor = useThemeStore((s) => s.setAccentColor)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <Circle size={14} weight="fill" style={{ color: colors.textTertiary }} />
+        <div className="text-[12px] font-medium" style={{ color: colors.textPrimary }}>
+          Accent color
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {PRESETS.map((preset) => (
+          <button
+            key={preset}
+            onClick={() => setAccentColor(preset)}
+            className="w-5 h-5 rounded-full transition-all"
+            title={preset}
+            style={{
+              background: preset,
+              outline: accentColor === preset ? `2px solid ${preset}` : '2px solid transparent',
+              outlineOffset: 2,
+              transform: accentColor === preset ? 'scale(1.15)' : 'scale(1)',
+            }}
+          />
+        ))}
+        {/* Custom color picker */}
+        <button
+          onClick={() => inputRef.current?.click()}
+          className="w-5 h-5 rounded-full flex items-center justify-center transition-all overflow-hidden relative"
+          title="Custom color"
+          style={{
+            background: PRESETS.includes(accentColor) ? colors.surfaceSecondary : accentColor,
+            border: `1px dashed ${colors.containerBorder}`,
+            outline: !PRESETS.includes(accentColor) ? `2px solid ${accentColor}` : '2px solid transparent',
+            outlineOffset: 2,
+          }}
+        >
+          {PRESETS.includes(accentColor) && (
+            <span style={{ fontSize: 10, color: colors.textTertiary, lineHeight: 1 }}>+</span>
+          )}
+          <input
+            ref={inputRef}
+            type="color"
+            value={accentColor}
+            onChange={(e) => setAccentColor(e.target.value)}
+            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+            tabIndex={-1}
+          />
+        </button>
+      </div>
+      {accentColor !== DEFAULT_ACCENT && (
+        <button
+          onClick={() => setAccentColor(DEFAULT_ACCENT)}
+          className="text-[10px] self-start"
+          style={{ color: colors.textTertiary }}
+        >
+          Reset to default
+        </button>
+      )}
+    </div>
   )
 }
 
@@ -221,6 +300,11 @@ export function SettingsPopover() {
                 />
               </div>
             </div>
+
+            <div style={{ height: 1, background: colors.popoverBorder }} />
+
+            {/* Accent color */}
+            <AccentRow colors={colors} />
           </div>
         </motion.div>,
         popoverLayer,

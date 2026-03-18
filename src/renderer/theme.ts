@@ -272,17 +272,62 @@ export type ColorPalette = { [K in keyof typeof darkColors]: string }
 
 export type ThemeMode = 'system' | 'light' | 'dark'
 
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const m = hex.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i)
+  if (!m) return null
+  return { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) }
+}
+
+function darkenHex(hex: string, amount: number): string {
+  const rgb = hexToRgb(hex)
+  if (!rgb) return hex
+  const f = 1 - amount
+  const r = Math.round(rgb.r * f).toString(16).padStart(2, '0')
+  const g = Math.round(rgb.g * f).toString(16).padStart(2, '0')
+  const b = Math.round(rgb.b * f).toString(16).padStart(2, '0')
+  return `#${r}${g}${b}`
+}
+
+function deriveAccentTokens(hex: string): Partial<ColorPalette> {
+  const rgb = hexToRgb(hex)
+  if (!rgb) return {}
+  const { r, g, b } = rgb
+  return {
+    accent: hex,
+    accentLight: `rgba(${r}, ${g}, ${b}, 0.1)`,
+    accentSoft: `rgba(${r}, ${g}, ${b}, 0.15)`,
+    accentBorder: `rgba(${r}, ${g}, ${b}, 0.19)`,
+    accentBorderMedium: `rgba(${r}, ${g}, ${b}, 0.25)`,
+    inputFocusBorder: `rgba(${r}, ${g}, ${b}, 0.4)`,
+    statusRunning: hex,
+    statusRunningBg: `rgba(${r}, ${g}, ${b}, 0.1)`,
+    statusPermission: hex,
+    statusPermissionGlow: `rgba(${r}, ${g}, ${b}, 0.4)`,
+    sendBg: hex,
+    sendHover: darkenHex(hex, 0.08),
+    sendDisabled: `rgba(${r}, ${g}, ${b}, 0.3)`,
+    toolRunningBorder: `rgba(${r}, ${g}, ${b}, 0.3)`,
+    toolRunningBg: `rgba(${r}, ${g}, ${b}, 0.05)`,
+    timelineNode: `rgba(${r}, ${g}, ${b}, 0.2)`,
+    timelineNodeActive: hex,
+  }
+}
+
+const DEFAULT_ACCENT = '#d97757'
+
 interface ThemeState {
   isDark: boolean
   themeMode: ThemeMode
   soundEnabled: boolean
   expandedUI: boolean
+  accentColor: string
   /** OS-reported dark mode — used when themeMode is 'system' */
   _systemIsDark: boolean
   setIsDark: (isDark: boolean) => void
   setThemeMode: (mode: ThemeMode) => void
   setSoundEnabled: (enabled: boolean) => void
   setExpandedUI: (expanded: boolean) => void
+  setAccentColor: (hex: string) => void
   /** Called by OS theme change listener — updates system value */
   setSystemTheme: (isDark: boolean) => void
 }
@@ -300,15 +345,17 @@ function syncTokensToCss(tokens: ColorPalette): void {
   }
 }
 
-function applyTheme(isDark: boolean): void {
+function applyTheme(isDark: boolean, accentColor?: string): void {
   document.documentElement.classList.toggle('dark', isDark)
   document.documentElement.classList.toggle('light', !isDark)
-  syncTokensToCss(isDark ? darkColors : lightColors)
+  const base = isDark ? darkColors : lightColors
+  const accent = accentColor && accentColor !== DEFAULT_ACCENT ? deriveAccentTokens(accentColor) : {}
+  syncTokensToCss({ ...base, ...accent } as ColorPalette)
 }
 
 const SETTINGS_KEY = 'clui-settings'
 
-function loadSettings(): { themeMode: ThemeMode; soundEnabled: boolean; expandedUI: boolean } {
+function loadSettings(): { themeMode: ThemeMode; soundEnabled: boolean; expandedUI: boolean; accentColor: string } {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY)
     if (raw) {
@@ -317,13 +364,14 @@ function loadSettings(): { themeMode: ThemeMode; soundEnabled: boolean; expanded
         themeMode: ['light', 'dark'].includes(parsed.themeMode) ? parsed.themeMode : 'dark',
         soundEnabled: typeof parsed.soundEnabled === 'boolean' ? parsed.soundEnabled : true,
         expandedUI: typeof parsed.expandedUI === 'boolean' ? parsed.expandedUI : false,
+        accentColor: typeof parsed.accentColor === 'string' && parsed.accentColor.startsWith('#') ? parsed.accentColor : DEFAULT_ACCENT,
       }
     }
   } catch {}
-  return { themeMode: 'dark', soundEnabled: true, expandedUI: false }
+  return { themeMode: 'dark', soundEnabled: true, expandedUI: false, accentColor: DEFAULT_ACCENT }
 }
 
-function saveSettings(s: { themeMode: ThemeMode; soundEnabled: boolean; expandedUI: boolean }): void {
+function saveSettings(s: { themeMode: ThemeMode; soundEnabled: boolean; expandedUI: boolean; accentColor: string }): void {
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)) } catch {}
 }
 
@@ -335,37 +383,47 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   themeMode: saved.themeMode,
   soundEnabled: saved.soundEnabled,
   expandedUI: saved.expandedUI,
+  accentColor: saved.accentColor,
   _systemIsDark: true,
   setIsDark: (isDark) => {
     set({ isDark })
-    applyTheme(isDark)
+    applyTheme(isDark, get().accentColor)
   },
   setThemeMode: (mode) => {
     const resolved = mode === 'system' ? get()._systemIsDark : mode === 'dark'
     set({ themeMode: mode, isDark: resolved })
-    applyTheme(resolved)
-    saveSettings({ themeMode: mode, soundEnabled: get().soundEnabled, expandedUI: get().expandedUI })
+    applyTheme(resolved, get().accentColor)
+    saveSettings({ themeMode: mode, soundEnabled: get().soundEnabled, expandedUI: get().expandedUI, accentColor: get().accentColor })
   },
   setSoundEnabled: (enabled) => {
     set({ soundEnabled: enabled })
-    saveSettings({ themeMode: get().themeMode, soundEnabled: enabled, expandedUI: get().expandedUI })
+    saveSettings({ themeMode: get().themeMode, soundEnabled: enabled, expandedUI: get().expandedUI, accentColor: get().accentColor })
   },
   setExpandedUI: (expanded) => {
     set({ expandedUI: expanded })
-    saveSettings({ themeMode: get().themeMode, soundEnabled: get().soundEnabled, expandedUI: expanded })
+    saveSettings({ themeMode: get().themeMode, soundEnabled: get().soundEnabled, expandedUI: expanded, accentColor: get().accentColor })
+  },
+  setAccentColor: (hex) => {
+    set({ accentColor: hex })
+    applyTheme(get().isDark, hex)
+    saveSettings({ themeMode: get().themeMode, soundEnabled: get().soundEnabled, expandedUI: get().expandedUI, accentColor: hex })
   },
   setSystemTheme: (isDark) => {
     set({ _systemIsDark: isDark })
     // Only apply if following system
     if (get().themeMode === 'system') {
       set({ isDark })
-      applyTheme(isDark)
+      applyTheme(isDark, get().accentColor)
     }
   },
 }))
 
-// Initialize CSS vars with saved theme
-syncTokensToCss(saved.themeMode === 'light' ? lightColors : darkColors)
+// Initialize CSS vars with saved theme (apply accent overlay if non-default)
+{
+  const base = saved.themeMode === 'light' ? lightColors : darkColors
+  const accent = saved.accentColor && saved.accentColor !== DEFAULT_ACCENT ? deriveAccentTokens(saved.accentColor) : {}
+  syncTokensToCss({ ...base, ...accent } as ColorPalette)
+}
 
 /** Reactive hook — returns the active color palette */
 export function useColors(): ColorPalette {
