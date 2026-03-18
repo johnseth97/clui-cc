@@ -358,6 +358,10 @@ export const IPC = {
   // Permission mode
   SET_PERMISSION_MODE: 'clui:set-permission-mode',
 
+  // Login item (auto-start)
+  GET_AUTO_START: 'clui:get-auto-start',
+  SET_AUTO_START: 'clui:set-auto-start',
+
   // Legacy (kept for backward compat during migration)
   STREAM_EVENT: 'clui:stream-event',
   RUN_COMPLETE: 'clui:run-complete',

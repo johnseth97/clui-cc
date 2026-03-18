@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
-import { DotsThree, Bell, ArrowsOutSimple, Moon } from '@phosphor-icons/react'
+import { DotsThree, Bell, ArrowsOutSimple, Moon, Power } from '@phosphor-icons/react'
 import { useThemeStore } from '../theme'
 import { useSessionStore } from '../stores/sessionStore'
 import { usePopoverLayer } from './PopoverLayer'
@@ -58,6 +58,26 @@ export function SettingsPopover() {
   const triggerRef = useRef<HTMLButtonElement>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState<{ right: number; top?: number; bottom?: number; maxHeight?: number }>({ right: 0 })
+  const [autoStart, setAutoStart] = useState<boolean | null>(null)
+  const [startMinimized, setStartMinimized] = useState(false)
+
+  useEffect(() => {
+    window.clui.getAutoStart().then(({ enabled, startMinimized: sm }) => {
+      setAutoStart(enabled)
+      setStartMinimized(sm)
+    }).catch(() => { setAutoStart(false) })
+  }, [])
+
+  const handleAutoStart = async (next: boolean) => {
+    const result = await window.clui.setAutoStart({ enabled: next, startMinimized })
+    setAutoStart(result.enabled)
+    setStartMinimized(result.startMinimized)
+  }
+
+  const handleStartMinimized = async (next: boolean) => {
+    const result = await window.clui.setAutoStart({ enabled: true, startMinimized: next })
+    setStartMinimized(result.startMinimized)
+  }
 
   const updatePos = useCallback(() => {
     if (!triggerRef.current) return
@@ -220,6 +240,30 @@ export function SettingsPopover() {
                   label="Toggle dark theme"
                 />
               </div>
+            </div>
+
+            <div style={{ height: 1, background: colors.popoverBorder }} />
+
+            {/* Launch at login */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Power size={14} style={{ color: colors.textTertiary }} />
+                  <div className="text-[12px] font-medium" style={{ color: colors.textPrimary }}>
+                    Launch at login
+                  </div>
+                </div>
+                {autoStart !== null
+                  ? <RowToggle checked={autoStart} onChange={handleAutoStart} colors={colors} label="Toggle launch at login" />
+                  : <span className="text-[11px]" style={{ color: colors.textMuted }}>…</span>
+                }
+              </div>
+              {autoStart && (
+                <div className="flex items-center justify-between gap-3 pl-5">
+                  <div className="text-[12px]" style={{ color: colors.textSecondary }}>Start minimized</div>
+                  <RowToggle checked={startMinimized} onChange={handleStartMinimized} colors={colors} label="Toggle start minimized" />
+                </div>
+              )}
             </div>
           </div>
         </motion.div>,

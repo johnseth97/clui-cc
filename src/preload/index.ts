@@ -33,6 +33,8 @@ export interface CluiAPI {
   setPermissionMode(mode: string): void
   getTheme(): Promise<{ isDark: boolean }>
   onThemeChange(callback: (isDark: boolean) => void): () => void
+  getAutoStart(): Promise<{ enabled: boolean; startMinimized: boolean }>
+  setAutoStart(opts: { enabled: boolean; startMinimized: boolean }): Promise<{ enabled: boolean; startMinimized: boolean }>
 
   // ─── Window management ───
   resizeHeight(height: number): void
@@ -84,6 +86,8 @@ const api: CluiAPI = {
     ipcRenderer.invoke(IPC.MARKETPLACE_UNINSTALL, { pluginName }),
   setPermissionMode: (mode) => ipcRenderer.send(IPC.SET_PERMISSION_MODE, mode),
   getTheme: () => ipcRenderer.invoke(IPC.GET_THEME),
+  getAutoStart: () => ipcRenderer.invoke(IPC.GET_AUTO_START),
+  setAutoStart: (opts) => ipcRenderer.invoke(IPC.SET_AUTO_START, opts),
   onThemeChange: (callback) => {
     const handler = (_e: Electron.IpcRendererEvent, isDark: boolean) => callback(isDark)
     ipcRenderer.on(IPC.THEME_CHANGED, handler)

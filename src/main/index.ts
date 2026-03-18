@@ -858,6 +858,18 @@ ipcMain.handle(IPC.MARKETPLACE_UNINSTALL, async (_event, { pluginName }: { plugi
   return uninstallPlugin(pluginName)
 })
 
+// ─── Login item (auto-start) ───
+
+ipcMain.handle(IPC.GET_AUTO_START, () => {
+  const settings = app.getLoginItemSettings()
+  return { enabled: settings.openAtLogin, startMinimized: settings.openAsHidden ?? false }
+})
+
+ipcMain.handle(IPC.SET_AUTO_START, (_event, { enabled, startMinimized }: { enabled: boolean; startMinimized: boolean }) => {
+  app.setLoginItemSettings({ openAtLogin: enabled, openAsHidden: startMinimized })
+  return { enabled, startMinimized }
+})
+
 // ─── Theme Detection ───
 
 ipcMain.handle(IPC.GET_THEME, () => {
