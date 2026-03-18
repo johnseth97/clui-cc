@@ -3,6 +3,8 @@ import { IPC } from '../shared/types'
 import type { RunOptions, NormalizedEvent, HealthReport, EnrichedError, Attachment, SessionMeta, CatalogPlugin, SessionLoadMessage } from '../shared/types'
 
 export interface CluiAPI {
+  setShortcut(opts: { primary?: string; secondary?: string }): Promise<{ primary?: { ok: boolean; error?: string }; secondary?: { ok: boolean; error?: string } }>
+  getShortcut(): Promise<{ primary: string; secondary: string }>
   // ─── Request-response (renderer → main) ───
   start(): Promise<{ version: string; auth: { email?: string; subscriptionType?: string; authMethod?: string }; mcpServers: string[]; projectPath: string; homePath: string }>
   createTab(): Promise<{ tabId: string }>
@@ -31,6 +33,8 @@ export interface CluiAPI {
   installPlugin(repo: string, pluginName: string, marketplace: string, sourcePath?: string, isSkillMd?: boolean): Promise<{ ok: boolean; error?: string }>
   uninstallPlugin(pluginName: string): Promise<{ ok: boolean; error?: string }>
   setPermissionMode(mode: string): void
+  getAutoStart(): Promise<{ enabled: boolean; startMinimized: boolean }>
+  setAutoStart(opts: { enabled: boolean; startMinimized: boolean }): Promise<{ enabled: boolean; startMinimized: boolean }>
   getTheme(): Promise<{ isDark: boolean }>
   onThemeChange(callback: (isDark: boolean) => void): () => void
 
@@ -52,6 +56,8 @@ export interface CluiAPI {
 }
 
 const api: CluiAPI = {
+  setShortcut: (opts) => ipcRenderer.invoke(IPC.SET_SHORTCUT, opts),
+  getShortcut: () => ipcRenderer.invoke(IPC.GET_SHORTCUT),
   // ─── Request-response ───
   start: () => ipcRenderer.invoke(IPC.START),
   createTab: () => ipcRenderer.invoke(IPC.CREATE_TAB),
@@ -83,6 +89,8 @@ const api: CluiAPI = {
   uninstallPlugin: (pluginName) =>
     ipcRenderer.invoke(IPC.MARKETPLACE_UNINSTALL, { pluginName }),
   setPermissionMode: (mode) => ipcRenderer.send(IPC.SET_PERMISSION_MODE, mode),
+  getAutoStart: () => ipcRenderer.invoke(IPC.GET_AUTO_START),
+  setAutoStart: (opts) => ipcRenderer.invoke(IPC.SET_AUTO_START, opts),
   getTheme: () => ipcRenderer.invoke(IPC.GET_THEME),
   onThemeChange: (callback) => {
     const handler = (_e: Electron.IpcRendererEvent, isDark: boolean) => callback(isDark)

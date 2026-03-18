@@ -24,6 +24,18 @@ export default function App() {
   const setSystemTheme = useThemeStore((s) => s.setSystemTheme)
   const expandedUI = useThemeStore((s) => s.expandedUI)
 
+  // ─── Restore saved keyboard shortcuts at startup ───
+  useEffect(() => {
+    const primary = localStorage.getItem('clui-shortcut-primary')
+    const secondary = localStorage.getItem('clui-shortcut-secondary')
+    const opts: { primary?: string; secondary?: string } = {}
+    if (primary) opts.primary = primary
+    if (secondary) opts.secondary = secondary
+    if (Object.keys(opts).length > 0) {
+      window.clui.setShortcut(opts).catch(() => {})
+    }
+  }, [])
+
   // ─── Theme initialization ───
   useEffect(() => {
     // Get initial OS theme — setSystemTheme respects themeMode (system/light/dark)
@@ -52,6 +64,7 @@ export default function App() {
             tabs: s.tabs.map((t, i) => (i === 0 ? { ...t, id: tabId } : t)),
             activeTabId: tabId,
           }))
+          useSessionStore.getState().restoreLastSession(tabId)
         }).catch(() => {})
       }
     })

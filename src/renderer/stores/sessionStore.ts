@@ -64,6 +64,7 @@ interface State {
   addSystemMessage: (content: string) => void
   sendMessage: (prompt: string, projectPath?: string) => void
   respondPermission: (tabId: string, questionId: string, optionId: string) => void
+  restoreLastSession: (tabId: string) => Promise<void>
   addDirectory: (dir: string) => void
   removeDirectory: (dir: string) => void
   setBaseDirectory: (dir: string) => void
@@ -77,6 +78,24 @@ interface State {
 
 let msgCounter = 0
 const nextMsgId = () => `msg-${++msgCounter}`
+
+// ─── Last-session persistence ───
+
+const LAST_SESSION_KEY = 'clui-last-session'
+
+function persistLastSession(folder: string): void {
+  try { localStorage.setItem(LAST_SESSION_KEY, JSON.stringify({ folder })) } catch {}
+}
+
+export function loadLastSession(): { folder: string } | null {
+  try {
+    const raw = localStorage.getItem(LAST_SESSION_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (typeof parsed?.folder !== 'string') return null
+    return { folder: parsed.folder }
+  } catch { return null }
+}
 
 // ─── Notification sound (plays when task completes while window is hidden) ───
 const notificationAudio = new Audio(notificationSrc)
@@ -465,9 +484,19 @@ export const useSessionStore = create<State>((set, get) => ({
     }))
   },
 
+  restoreLastSession: async (tabId) => {
+    if (!useThemeStore.getState().useLastFolder) return
+    const lastSession = loadLastSession()
+    if (!lastSession) return
+    set((s) => ({
+      tabs: s.tabs.map((t) => t.id === tabId ? { ...t, workingDirectory: lastSession.folder, hasChosenDirectory: true } : t),
+    }))
+  },
+
   setBaseDirectory: (dir) => {
     const { activeTabId } = get()
     window.clui.resetTabSession(activeTabId)
+    persistLastSession(dir)
     set((s) => ({
       tabs: s.tabs.map((t) =>
         t.id === activeTabId
@@ -527,6 +556,11 @@ export const useSessionStore = create<State>((set, get) => ({
 
     // Guard: don't send while connecting (warmup in progress)
     if (tab.status === 'connecting') return
+
+    // Persist folder when first message locks it in
+    if (!tab.hasChosenDirectory) {
+      persistLastSession(resolvedPath)
+    }
 
     const isBusy = tab.status === 'running'
     const requestId = crypto.randomUUID()

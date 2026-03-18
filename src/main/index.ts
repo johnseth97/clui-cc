@@ -21,6 +21,8 @@ let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let screenshotCounter = 0
 let toggleSequence = 0
+let currentPrimaryShortcut = 'Alt+Space'
+let currentSecondaryShortcut = 'CommandOrControl+Shift+K'
 
 // Feature flag: enable PTY interactive permissions transport
 const INTERACTIVE_PTY = process.env.CLUI_INTERACTIVE_PERMISSIONS_PTY === '1'
@@ -317,6 +319,56 @@ ipcMain.handle(IPC.TAB_HEALTH, () => {
 ipcMain.handle(IPC.CLOSE_TAB, (_event, tabId: string) => {
   log(`IPC CLOSE_TAB: ${tabId}`)
   controlPlane.closeTab(tabId)
+})
+
+ipcMain.handle(IPC.GET_SHORTCUT, () => ({ primary: currentPrimaryShortcut, secondary: currentSecondaryShortcut }))
+
+ipcMain.handle(IPC.SET_SHORTCUT, (_event, { primary, secondary }: { primary?: string; secondary?: string }) => {
+  const results: { primary?: { ok: boolean; error?: string }; secondary?: { ok: boolean; error?: string } } = {}
+
+  if (primary !== undefined) {
+    if (!primary || typeof primary !== 'string') {
+      results.primary = { ok: false, error: 'Invalid shortcut' }
+    } else {
+      try {
+        globalShortcut.unregister(currentPrimaryShortcut)
+        const ok = globalShortcut.register(primary, () => toggleWindow(`shortcut ${primary}`))
+        if (ok) {
+          currentPrimaryShortcut = primary
+          log(`IPC SET_SHORTCUT primary: registered "${primary}"`)
+          results.primary = { ok: true }
+        } else {
+          globalShortcut.register(currentPrimaryShortcut, () => toggleWindow(`shortcut ${currentPrimaryShortcut}`))
+          results.primary = { ok: false, error: 'Shortcut already in use or invalid' }
+        }
+      } catch (e: any) {
+        results.primary = { ok: false, error: e.message }
+      }
+    }
+  }
+
+  if (secondary !== undefined) {
+    if (!secondary || typeof secondary !== 'string') {
+      results.secondary = { ok: false, error: 'Invalid shortcut' }
+    } else {
+      try {
+        globalShortcut.unregister(currentSecondaryShortcut)
+        const ok = globalShortcut.register(secondary, () => toggleWindow(`shortcut ${secondary}`))
+        if (ok) {
+          currentSecondaryShortcut = secondary
+          log(`IPC SET_SHORTCUT secondary: registered "${secondary}"`)
+          results.secondary = { ok: true }
+        } else {
+          globalShortcut.register(currentSecondaryShortcut, () => toggleWindow(`shortcut ${currentSecondaryShortcut}`))
+          results.secondary = { ok: false, error: 'Shortcut already in use or invalid' }
+        }
+      } catch (e: any) {
+        results.secondary = { ok: false, error: e.message }
+      }
+    }
+  }
+
+  return results
 })
 
 ipcMain.on(IPC.SET_PERMISSION_MODE, (_event, mode: string) => {
@@ -845,6 +897,18 @@ nativeTheme.on('updated', () => {
   broadcast(IPC.THEME_CHANGED, nativeTheme.shouldUseDarkColors)
 })
 
+// ─── Auto-start (login item) ───
+
+ipcMain.handle(IPC.GET_AUTO_START, () => {
+  const settings = app.getLoginItemSettings()
+  return { enabled: settings.openAtLogin, startMinimized: settings.openAsHidden ?? false }
+})
+
+ipcMain.handle(IPC.SET_AUTO_START, (_event, { enabled, startMinimized }: { enabled: boolean; startMinimized: boolean }) => {
+  app.setLoginItemSettings({ openAtLogin: enabled, openAsHidden: startMinimized })
+  return { enabled, startMinimized }
+})
+
 // ─── App Lifecycle ───
 
 app.whenReady().then(() => {
@@ -892,11 +956,11 @@ app.whenReady().then(() => {
 
   // Primary: Option+Space (2 keys, doesn't conflict with shell)
   // Fallback: Cmd+Shift+K kept as secondary shortcut
-  const registered = globalShortcut.register('Alt+Space', () => toggleWindow('shortcut Alt+Space'))
+  const registered = globalShortcut.register(currentPrimaryShortcut, () => toggleWindow(`shortcut ${currentPrimaryShortcut}`))
   if (!registered) {
-    log('Alt+Space shortcut registration failed — macOS input sources may claim it')
+    log(`${currentPrimaryShortcut} shortcut registration failed — macOS input sources may claim it`)
   }
-  globalShortcut.register('CommandOrControl+Shift+K', () => toggleWindow('shortcut Cmd/Ctrl+Shift+K'))
+  globalShortcut.register(currentSecondaryShortcut, () => toggleWindow(`shortcut ${currentSecondaryShortcut}`))
 
   const trayIconPath = join(__dirname, '../../resources/trayTemplate.png')
   const trayIcon = nativeImage.createFromPath(trayIconPath)
