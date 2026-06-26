@@ -321,6 +321,7 @@ interface ThemeState {
   isDark: boolean
   themeMode: ThemeMode
   soundEnabled: boolean
+  osNotificationsEnabled: boolean
   expandedUI: boolean
   accentColor: string
   useLastFolder: boolean
@@ -329,6 +330,7 @@ interface ThemeState {
   setIsDark: (isDark: boolean) => void
   setThemeMode: (mode: ThemeMode) => void
   setSoundEnabled: (enabled: boolean) => void
+  setOsNotificationsEnabled: (enabled: boolean) => void
   setExpandedUI: (expanded: boolean) => void
   setAccentColor: (hex: string) => void
   setUseLastFolder: (enabled: boolean) => void
@@ -359,7 +361,7 @@ function applyTheme(isDark: boolean, accentColor?: string): void {
 
 const SETTINGS_KEY = 'clui-settings'
 
-function loadSettings(): { themeMode: ThemeMode; soundEnabled: boolean; expandedUI: boolean; accentColor: string; useLastFolder: boolean } {
+function loadSettings(): { themeMode: ThemeMode; soundEnabled: boolean; osNotificationsEnabled: boolean; expandedUI: boolean; accentColor: string; useLastFolder: boolean } {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY)
     if (raw) {
@@ -367,16 +369,17 @@ function loadSettings(): { themeMode: ThemeMode; soundEnabled: boolean; expanded
       return {
         themeMode: ['light', 'dark'].includes(parsed.themeMode) ? parsed.themeMode : 'dark',
         soundEnabled: typeof parsed.soundEnabled === 'boolean' ? parsed.soundEnabled : true,
+        osNotificationsEnabled: typeof parsed.osNotificationsEnabled === 'boolean' ? parsed.osNotificationsEnabled : true,
         expandedUI: typeof parsed.expandedUI === 'boolean' ? parsed.expandedUI : false,
         accentColor: typeof parsed.accentColor === 'string' && parsed.accentColor.startsWith('#') ? parsed.accentColor : DEFAULT_ACCENT,
         useLastFolder: typeof parsed.useLastFolder === 'boolean' ? parsed.useLastFolder : true,
       }
     }
   } catch {}
-  return { themeMode: 'dark', soundEnabled: true, expandedUI: false, accentColor: DEFAULT_ACCENT, useLastFolder: true }
+  return { themeMode: 'dark', soundEnabled: true, osNotificationsEnabled: true, expandedUI: false, accentColor: DEFAULT_ACCENT, useLastFolder: true }
 }
 
-function saveSettings(s: { themeMode: ThemeMode; soundEnabled: boolean; expandedUI: boolean; accentColor: string; useLastFolder: boolean }): void {
+function saveSettings(s: { themeMode: ThemeMode; soundEnabled: boolean; osNotificationsEnabled: boolean; expandedUI: boolean; accentColor: string; useLastFolder: boolean }): void {
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)) } catch {}
 }
 
@@ -387,6 +390,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   isDark: saved.themeMode === 'dark' ? true : saved.themeMode === 'light' ? false : true,
   themeMode: saved.themeMode,
   soundEnabled: saved.soundEnabled,
+  osNotificationsEnabled: saved.osNotificationsEnabled,
   expandedUI: saved.expandedUI,
   accentColor: saved.accentColor,
   useLastFolder: saved.useLastFolder,
@@ -399,24 +403,28 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     const resolved = mode === 'system' ? get()._systemIsDark : mode === 'dark'
     set({ themeMode: mode, isDark: resolved })
     applyTheme(resolved, get().accentColor)
-    saveSettings({ themeMode: mode, soundEnabled: get().soundEnabled, expandedUI: get().expandedUI, accentColor: get().accentColor, useLastFolder: get().useLastFolder })
+    saveSettings({ themeMode: mode, soundEnabled: get().soundEnabled, osNotificationsEnabled: get().osNotificationsEnabled, expandedUI: get().expandedUI, accentColor: get().accentColor, useLastFolder: get().useLastFolder })
   },
   setSoundEnabled: (enabled) => {
     set({ soundEnabled: enabled })
-    saveSettings({ themeMode: get().themeMode, soundEnabled: enabled, expandedUI: get().expandedUI, accentColor: get().accentColor, useLastFolder: get().useLastFolder })
+    saveSettings({ themeMode: get().themeMode, soundEnabled: enabled, osNotificationsEnabled: get().osNotificationsEnabled, expandedUI: get().expandedUI, accentColor: get().accentColor, useLastFolder: get().useLastFolder })
+  },
+  setOsNotificationsEnabled: (enabled) => {
+    set({ osNotificationsEnabled: enabled })
+    saveSettings({ themeMode: get().themeMode, soundEnabled: get().soundEnabled, osNotificationsEnabled: enabled, expandedUI: get().expandedUI, accentColor: get().accentColor, useLastFolder: get().useLastFolder })
   },
   setExpandedUI: (expanded) => {
     set({ expandedUI: expanded })
-    saveSettings({ themeMode: get().themeMode, soundEnabled: get().soundEnabled, expandedUI: expanded, accentColor: get().accentColor, useLastFolder: get().useLastFolder })
+    saveSettings({ themeMode: get().themeMode, soundEnabled: get().soundEnabled, osNotificationsEnabled: get().osNotificationsEnabled, expandedUI: expanded, accentColor: get().accentColor, useLastFolder: get().useLastFolder })
   },
   setAccentColor: (hex) => {
     set({ accentColor: hex })
     applyTheme(get().isDark, hex)
-    saveSettings({ themeMode: get().themeMode, soundEnabled: get().soundEnabled, expandedUI: get().expandedUI, accentColor: hex, useLastFolder: get().useLastFolder })
+    saveSettings({ themeMode: get().themeMode, soundEnabled: get().soundEnabled, osNotificationsEnabled: get().osNotificationsEnabled, expandedUI: get().expandedUI, accentColor: hex, useLastFolder: get().useLastFolder })
   },
   setUseLastFolder: (enabled) => {
     set({ useLastFolder: enabled })
-    saveSettings({ themeMode: get().themeMode, soundEnabled: get().soundEnabled, expandedUI: get().expandedUI, accentColor: get().accentColor, useLastFolder: enabled })
+    saveSettings({ themeMode: get().themeMode, soundEnabled: get().soundEnabled, osNotificationsEnabled: get().osNotificationsEnabled, expandedUI: get().expandedUI, accentColor: get().accentColor, useLastFolder: enabled })
   },
   setSystemTheme: (isDark) => {
     set({ _systemIsDark: isDark })

@@ -310,6 +310,8 @@ function AccentRow({ colors }: { colors: ReturnType<typeof useColors> }) {
 export function SettingsPopover() {
   const soundEnabled = useThemeStore((s) => s.soundEnabled)
   const setSoundEnabled = useThemeStore((s) => s.setSoundEnabled)
+  const osNotificationsEnabled = useThemeStore((s) => s.osNotificationsEnabled)
+  const setOsNotificationsEnabled = useThemeStore((s) => s.setOsNotificationsEnabled)
   const themeMode = useThemeStore((s) => s.themeMode)
   const setThemeMode = useThemeStore((s) => s.setThemeMode)
   const expandedUI = useThemeStore((s) => s.expandedUI)
@@ -462,6 +464,18 @@ export function SettingsPopover() {
                 </div>
               </div>
               <RowToggle checked={soundEnabled} onChange={setSoundEnabled} colors={colors} label="Toggle notification sound" />
+            </div>
+
+            <div style={{ height: 1, background: colors.popoverBorder }} />
+
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <Bell size={14} weight="fill" style={{ color: colors.textTertiary }} />
+                <div className="text-[12px] font-medium" style={{ color: colors.textPrimary }}>
+                  OS notifications
+                </div>
+              </div>
+              <RowToggle checked={osNotificationsEnabled} onChange={setOsNotificationsEnabled} colors={colors} label="Toggle OS notifications" />
             </div>
 
             <div style={{ height: 1, background: colors.popoverBorder }} />

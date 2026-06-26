@@ -112,6 +112,37 @@ async function playNotificationIfHidden(): Promise<void> {
   } catch {}
 }
 
+function extractResponseSnippet(messages: Message[]): string {
+  // Find the last assistant text message (not a tool call)
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i]
+    if (msg.role === 'assistant' && !msg.toolName && msg.content.trim()) {
+      // Strip common markdown (headers, bold, code fences, links) for a clean preview
+      const plain = msg.content
+        .replace(/```[\s\S]*?```/g, '[code]')
+        .replace(/`[^`]+`/g, (m) => m.slice(1, -1))
+        .replace(/#{1,6}\s+/g, '')
+        .replace(/\*\*(.+?)\*\*/g, '$1')
+        .replace(/\*(.+?)\*/g, '$1')
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+        .replace(/\n+/g, ' ')
+        .trim()
+      return plain.length > 120 ? plain.slice(0, 117) + '…' : plain
+    }
+  }
+  return ''
+}
+
+async function sendOsNotificationIfHidden(title: string, body: string): Promise<void> {
+  if (!useThemeStore.getState().osNotificationsEnabled) return
+  try {
+    const visible = await window.clui.isVisible()
+    if (!visible) {
+      window.clui.sendOsNotification(title, body)
+    }
+  } catch {}
+}
+
 function makeLocalTab(): TabState {
   return {
     id: crypto.randomUUID(),
@@ -770,8 +801,12 @@ export const useSessionStore = create<State>((set, get) => ({
             } else {
               updated.permissionDenied = null
             }
-            // Play notification sound if window is hidden
+            // Play notification sound and send OS notification if window is hidden
             playNotificationIfHidden()
+            {
+              const snippet = extractResponseSnippet(updated.messages)
+              sendOsNotificationIfHidden(updated.title || 'Claude', snippet || 'Task complete')
+            }
             break
 
           case 'error':
@@ -784,6 +819,8 @@ export const useSessionStore = create<State>((set, get) => ({
               ...updated.messages,
               { id: nextMsgId(), role: 'system', content: `Error: ${event.message}`, timestamp: Date.now() },
             ]
+            playNotificationIfHidden()
+            sendOsNotificationIfHidden(updated.title || 'Claude', `Error: ${event.message}`)
             break
 
           case 'session_dead':
@@ -801,6 +838,8 @@ export const useSessionStore = create<State>((set, get) => ({
                 timestamp: Date.now(),
               },
             ]
+            playNotificationIfHidden()
+            sendOsNotificationIfHidden(updated.title || 'Claude', `Session ended unexpectedly (exit ${event.exitCode})`)
             break
 
           case 'permission_request': {

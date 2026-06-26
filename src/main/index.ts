@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, screen, globalShortcut, Tray, Menu, nativeImage, nativeTheme, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, screen, globalShortcut, Tray, Menu, nativeImage, nativeTheme, shell, Notification } from 'electron'
 import { join } from 'path'
 import { existsSync, readdirSync, statSync, createReadStream } from 'fs'
 import { createInterface } from 'readline'
@@ -907,6 +907,20 @@ ipcMain.handle(IPC.GET_AUTO_START, () => {
 ipcMain.handle(IPC.SET_AUTO_START, (_event, { enabled, startMinimized }: { enabled: boolean; startMinimized: boolean }) => {
   app.setLoginItemSettings({ openAtLogin: enabled, openAsHidden: startMinimized })
   return { enabled, startMinimized }
+})
+
+// ─── OS Notifications ───
+
+ipcMain.on(IPC.SEND_OS_NOTIFICATION, (_event, { title, body }: { title: string; body: string }) => {
+  if (!Notification.isSupported()) return
+  const notification = new Notification({ title, body, silent: true })
+  notification.on('click', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show()
+      mainWindow.focus()
+    }
+  })
+  notification.show()
 })
 
 // ─── App Lifecycle ───

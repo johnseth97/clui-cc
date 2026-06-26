@@ -42,7 +42,12 @@ export function useClaudeEvents() {
           rafIdRef.current = requestAnimationFrame(flushChunks)
         }
       } else {
-        // All other events pass through immediately
+        // Flush any buffered text chunks before processing the next event so
+        // the store has the full message content (e.g. for task_complete snippets)
+        if (chunkBufferRef.current.size > 0) {
+          cancelAnimationFrame(rafIdRef.current)
+          flushChunks()
+        }
         handleNormalizedEvent(tabId, event)
       }
     })

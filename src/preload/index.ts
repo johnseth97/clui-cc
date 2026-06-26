@@ -35,6 +35,7 @@ export interface CluiAPI {
   setPermissionMode(mode: string): void
   getAutoStart(): Promise<{ enabled: boolean; startMinimized: boolean }>
   setAutoStart(opts: { enabled: boolean; startMinimized: boolean }): Promise<{ enabled: boolean; startMinimized: boolean }>
+  sendOsNotification(title: string, body: string): void
   getTheme(): Promise<{ isDark: boolean }>
   onThemeChange(callback: (isDark: boolean) => void): () => void
 
@@ -91,6 +92,7 @@ const api: CluiAPI = {
   setPermissionMode: (mode) => ipcRenderer.send(IPC.SET_PERMISSION_MODE, mode),
   getAutoStart: () => ipcRenderer.invoke(IPC.GET_AUTO_START),
   setAutoStart: (opts) => ipcRenderer.invoke(IPC.SET_AUTO_START, opts),
+  sendOsNotification: (title, body) => ipcRenderer.send(IPC.SEND_OS_NOTIFICATION, { title, body }),
   getTheme: () => ipcRenderer.invoke(IPC.GET_THEME),
   onThemeChange: (callback) => {
     const handler = (_e: Electron.IpcRendererEvent, isDark: boolean) => callback(isDark)
