@@ -5,7 +5,7 @@
 ### Fresh Clone Bootstrap
 
 ```bash
-git clone https://github.com/lcoutodemos/clui-cc.git
+git clone https://github.com/johnseth97/clui-cc.git
 cd clui-cc
 npm run doctor     # verify environment — all checks should pass
 npm install        # installs deps + runs postinstall (electron-builder install-app-deps + icon patch)

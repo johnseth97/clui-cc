@@ -10,6 +10,25 @@ import { log as _log, LOG_FILE, flushLogs } from './logger'
 import { IPC } from '../shared/types'
 import type { RunOptions, NormalizedEvent, EnrichedError } from '../shared/types'
 
+// Ensure the app name is correct in dev mode (packaged builds use productName automatically)
+app.setName('Clui CC')
+
+// A service-managed launch (login item, launchd/brew services with KeepAlive) can
+// overlap with a manual launch of the same binary. Without this, that produces two
+// trays, two global-shortcut registration attempts, and two windows. Bail out of the
+// second process and just surface the first instance's window instead.
+const gotSingleInstanceLock = app.requestSingleInstanceLock()
+if (!gotSingleInstanceLock) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show()
+      mainWindow.focus()
+    }
+  })
+}
+
 const DEBUG_MODE = process.env.CLUI_DEBUG === '1'
 const SPACES_DEBUG = DEBUG_MODE || process.env.CLUI_SPACES_DEBUG === '1'
 
@@ -26,6 +45,18 @@ let currentSecondaryShortcut = 'CommandOrControl+Shift+K'
 
 // Feature flag: enable PTY interactive permissions transport
 const INTERACTIVE_PTY = process.env.CLUI_INTERACTIVE_PERMISSIONS_PTY === '1'
+
+// True when this launch should stay backgrounded (no window flash) — either because
+// macOS started us as a login item, or because we were launched with an explicit
+// --hidden flag (used by service/launchd-style launches, which can't rely on
+// Electron's per-launch openAsHidden heuristic).
+function shouldStartHidden(): boolean {
+  if (process.argv.includes('--hidden')) return true
+  if (process.platform === 'darwin') {
+    return app.getLoginItemSettings().wasOpenedAtLogin
+  }
+  return false
+}
 
 const controlPlane = new ControlPlane(INTERACTIVE_PTY)
 
@@ -132,7 +163,9 @@ function createWindow(): void {
   mainWindow.setAlwaysOnTop(true, 'screen-saver')
 
   mainWindow.once('ready-to-show', () => {
-    mainWindow?.show()
+    if (!shouldStartHidden()) {
+      mainWindow?.show()
+    }
     // Enable OS-level click-through for transparent regions.
     // { forward: true } ensures mousemove events still reach the renderer
     // so it can toggle click-through off when cursor enters interactive UI.
