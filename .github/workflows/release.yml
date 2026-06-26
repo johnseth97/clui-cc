@@ -25,6 +25,12 @@ jobs:
         with:
           node-version: 20
 
+      # node-gyp (needed to rebuild node-pty for this runner's arch) still
+      # imports distutils, which Python removed in 3.12+. setuptools >=60
+      # ships a shim that makes `import distutils` work again once installed.
+      - name: Work around missing distutils for node-gyp
+        run: python3 -m pip install --upgrade --break-system-packages setuptools
+
       - run: npm ci
 
       - run: npm run build
