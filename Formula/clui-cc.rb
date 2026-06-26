@@ -1,15 +1,15 @@
 class CluiCc < Formula
   desc "Desktop overlay for Claude Code"
   homepage "https://github.com/johnseth97/clui-cc"
-  version "0.1.0"
+  version "0.1.1"
 
   on_macos do
     on_arm do
-      url "https://github.com/johnseth97/clui-cc/releases/download/v0.1.0/clui-cc-0.1.0-arm64.zip"
+      url "https://github.com/johnseth97/clui-cc/releases/download/v0.1.1/clui-cc-0.1.1-arm64.zip"
       sha256 "REPLACE_WITH_ARM64_SHA256"
     end
     on_intel do
-      url "https://github.com/johnseth97/clui-cc/releases/download/v0.1.0/clui-cc-0.1.0-x64.zip"
+      url "https://github.com/johnseth97/clui-cc/releases/download/v0.1.1/clui-cc-0.1.1-x64.zip"
       sha256 "REPLACE_WITH_X64_SHA256"
     end
   end
