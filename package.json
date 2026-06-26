@@ -5,12 +5,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/lcoutodemos/clui-cc.git"
+    "url": "https://github.com/johnseth97/clui-cc.git"
   },
   "bugs": {
-    "url": "https://github.com/lcoutodemos/clui-cc/issues"
+    "url": "https://github.com/johnseth97/clui-cc/issues"
   },
-  "homepage": "https://github.com/lcoutodemos/clui-cc#readme",
+  "homepage": "https://github.com/johnseth97/clui-cc#readme",
   "main": "dist/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
@@ -33,9 +33,19 @@
   "build": {
     "appId": "com.clui.app",
     "productName": "Clui CC",
+    "directories": {
+      "output": "release"
+    },
     "mac": {
-      "icon": "resources/icon.icns"
-    }
+      "icon": "resources/icon.icns",
+      "category": "public.app-category.developer-tools",
+      "target": [
+        {
+          "target": "zip"
+        }
+      ]
+    },
+    "artifactName": "clui-cc-${version}-${arch}.${ext}"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.1",

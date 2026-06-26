@@ -51,7 +51,7 @@ Run these commands one at a time:
 **1) Clone the repo**
 
 ```bash
-git clone https://github.com/lcoutodemos/clui-cc.git
+git clone https://github.com/johnseth97/clui-cc.git
 ```
 
 **2) Enter the project folder**
